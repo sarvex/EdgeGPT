@@ -136,9 +136,6 @@ class Conversation:
                 headers=headers,
                 timeout=10,
             )
-            if response.status_code != 200:
-                raise Exception("Authentication failed")
-
         else:
             cookies = {
                 "_U": os.environ.get("BING_U"),
@@ -151,8 +148,9 @@ class Conversation:
                 timeout=30,
                 headers=headers,
             )
-            if response.status_code != 200:
-                raise Exception("Authentication failed")
+        if response.status_code != 200:
+            raise Exception("Authentication failed")
+
         try:
             self.struct = response.json()
             if self.struct["result"]["value"] == "UnauthorizedRequest":
@@ -184,15 +182,7 @@ class ChatHub:
         Ask a question to the bot
         """
         # Check if websocket is closed
-        if self.wss:
-            if self.wss.closed:
-                self.wss = await websockets.connect(
-                    "wss://sydney.bing.com/sydney/ChatHub",
-                    extra_headers=headers,
-                    max_size=None,
-                )
-                await self.__initial_handshake()
-        else:
+        if self.wss and self.wss.closed or not self.wss:
             self.wss = await websockets.connect(
                 "wss://sydney.bing.com/sydney/ChatHub",
                 extra_headers=headers,
@@ -226,9 +216,8 @@ class ChatHub:
         """
         Close the connection
         """
-        if self.wss:
-            if not self.wss.closed:
-                await self.wss.close()
+        if self.wss and not self.wss.closed:
+            await self.wss.close()
 
 
 class Chatbot:
@@ -285,11 +274,7 @@ def get_input(prompt):
             break
         lines.append(line)
 
-    # Join the lines, separated by newlines, and store the result
-    user_input = "\n".join(lines)
-
-    # Return the input
-    return user_input
+    return "\n".join(lines)
 
 
 async def main():
